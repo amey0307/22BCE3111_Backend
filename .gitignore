@@ -32,4 +32,4 @@ Thumbs.db
 api_test.go
 file_cleanup.go
 search.go
-retrieve.go
+uploads

@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"go_backend_legalForce/models"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -18,22 +20,11 @@ import (
 
 var ctx = context.Background()
 
-// File model
-type File struct {
-	ID         int       `json:"id"`
-	UserID     int       `json:"user_id"`
-	FileName   string    `json:"file_name"`
-	UploadDate time.Time `json:"upload_date"`
-	Size       int64     `json:"size"`
-	LocalPath  string    `json:"local_path"` // Path for local storage
-}
-
 // UploadFile handles the file upload
 func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient *redis.Client) {
-
-	tx, err := db.Begin() // Start a new transaction
+	err := r.ParseMultipartForm(10 << 20) // 10 MB maximum file size
 	if err != nil {
-		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
 		return
 	}
 
@@ -55,30 +46,52 @@ func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient 
 		return
 	}
 
-	// Save file metadata to the database
-	fileMetadata := File{
-		UserID:     1, // Replace with actual user ID from context
-		FileName:   fileName,
-		UploadDate: time.Now(),
-		Size:       fileHeader.Size,
-		LocalPath:  publicURL, // Store the public URL instead of local path
+	// Prepare file metadata
+	// Retrieve the user ID from the context or session
+	userID := 14 // Replace with actual user ID from context
+
+	// Check if the user exists in the users table
+	var exists bool
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)", userID).Scan(&exists)
+	if err != nil {
+		http.Error(w, "Failed to check user existence", http.StatusInternalServerError)
+		return
+	}
+
+	if !exists {
+		http.Error(w, "User  not found", http.StatusNotFound)
+		return
+	}
+
+	// Prepare file metadata
+	fileMetadata := models.File{
+		UserID:      userID,
+		FileName:    fileName,
+		UploadDate:  time.Now(),
+		Size:        fileHeader.Size,
+		LocalPath:   publicURL,                         // Store the public URL instead of local path
+		FileType:    filepath.Ext(fileHeader.Filename), // Get the file type from the file extension
+		S3URL:       "",                                // Leave empty since we're not using S3
+		Description: "",                                // Leave empty for now
+		IsShared:    false,                             // Default to false
+		Expiration:  time.Time{},                       // No expiration set
 	}
 
 	// Insert file metadata into the database
-	query := `INSERT INTO files (user_id, file_name, upload_date, size, local_path) VALUES ($1, $2, $3, $4, $5) RETURNING id`
-	err = db.QueryRow(query, fileMetadata.UserID, fileMetadata.FileName, fileMetadata.UploadDate, fileMetadata.Size, fileMetadata.LocalPath).Scan(&fileMetadata.ID)
+	query := `INSERT INTO files (user_id, file_name, upload_date, size, local_path, file_type, s3_url, description, is_shared, expiration_date) 
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+	err = db.QueryRow(query, fileMetadata.UserID, fileMetadata.FileName, fileMetadata.UploadDate, fileMetadata.Size,
+		fileMetadata.LocalPath, fileMetadata.FileType, fileMetadata.S3URL, fileMetadata.Description,
+		fileMetadata.IsShared, fileMetadata.Expiration).Scan(&fileMetadata.ID)
 
 	if err != nil {
-		tx.Rollback() // Rollback the transaction on error
+		log.Printf("Failed to save file metadata: %v", err, fileMetadata) // Log the actual error
 		http.Error(w, "Failed to save file metadata", http.StatusInternalServerError)
 		return
 	}
 
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
-		return
-	}
+	//clear cache
+	// redisClient.Del(ctx, "user_files:14")
 
 	// Cache the file metadata in Redis
 	cachedData, _ := json.Marshal(fileMetadata)
