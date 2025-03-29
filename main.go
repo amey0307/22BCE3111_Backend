@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -96,6 +97,8 @@ func main() {
 	router.HandleFunc("/files", func(w http.ResponseWriter, r *http.Request) {
 		fileupload.RetrieveFiles(w, r, db, redisClient) // Pass redisClient to RetrieveFiles function
 	}).Methods("GET")
+
+	
 
 	// Start the server
 	log.Println("Server started at :8080")
