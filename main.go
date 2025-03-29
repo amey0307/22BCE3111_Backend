@@ -5,14 +5,19 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 
 	"go_backend_legalForce/fileupload"
+	"go_backend_legalForce/middleware"
+	"go_backend_legalForce/redisconnection"
 
 	"database/sql"
 
@@ -27,6 +32,8 @@ type User struct {
 }
 
 var db *sql.DB
+var redisClient *redis.Client
+var wg sync.WaitGroup
 
 func initDB() {
 	var err error
@@ -41,7 +48,8 @@ func initDB() {
 		log.Fatal(err)
 	}
 
-	log.Println("Connected to the Neon database")
+	redisClient = redisconnection.NewRedisClient()
+	log.Println("Connected to the Neon database and Redis")
 }
 
 func main() {
@@ -56,23 +64,52 @@ func main() {
 
 	router := mux.NewRouter()
 
+	// Start the background job for file cleanup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		startFileCleanup(db)
+	}()
+
 	// Public endpoints
 	router.HandleFunc("/", test).Methods("GET")
 	router.HandleFunc("/register", RegisterUser).Methods("POST")
 	router.HandleFunc("/login", LoginUser).Methods("POST")
 
+	// Protected endpoint
+	router.Handle("/protected", middleware.AuthMiddleware(http.HandlerFunc(ProtectedEndpoint))).Methods("GET")
+
+	// Serve static files from the uploads directory
+	router.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads/"))))
+
 	// File upload endpoint
 	router.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
-		fileupload.UploadFile(w, r, db)
+		fileupload.UploadFile(w, r, db, redisClient) // Pass redisClient to UploadFile function
 	}).Methods("POST")
 
-	// Protected endpoint
-	router.Handle("/protected", AuthMiddleware(http.HandlerFunc(ProtectedEndpoint))).Methods("GET")
+	// Retrieve files endpoint
+	router.HandleFunc("/files", func(w http.ResponseWriter, r *http.Request) {
+		fileupload.RetrieveFiles(w, r, db, redisClient) // Pass redisClient to RetrieveFiles function
+	}).Methods("GET")
+
+	// Share file endpoint
+	router.HandleFunc("/share/{file_id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		fileID, _ := strconv.Atoi(vars["file_id"])
+		fileupload.ShareFile(w, r, db, redisClient, fileID) // Pass redisClient to ShareFile function
+	}).Methods("GET")
+
+	// Search files endpoint
+	router.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
+		fileupload.SearchFiles(w, r, db, redisClient) // Pass redisClient to SearchFiles function
+	}).Methods("GET")
 
 	// Start the server
 	log.Println("Server started at :8080")
 	http.ListenAndServe(":8080", router)
 
+	// Wait for the background job to finish (it won't, but this is for completeness)
+	wg.Wait()
 }
 
 func test(w http.ResponseWriter, r *http.Request) {
@@ -154,24 +191,4 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	// Respond with the token
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
-}
-
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenString := r.Header.Get("Authorization")
-		if tokenString == "" {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return []byte(os.Getenv("JWT_SECRET_KEY")), nil
-		})
-		if err != nil || !token.Valid {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }
