@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,7 +24,6 @@ type File struct {
 }
 
 func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
 	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		http.Error(w, "Unable to parse form", http.StatusBadRequest)
@@ -39,9 +39,30 @@ func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	fileName := uuid.New().String() + filepath.Ext(fileHeader.Filename)
 
-	localPath, err := saveFileLocally(file, fileName)
-	if err != nil {
-		http.Error(w, "Failed to save file locally", http.StatusInternalServerError)
+	resultChan := make(chan string)
+	var wg sync.WaitGroup
+
+	// Start a goroutine to handle the file upload
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		publicURL, err := saveFileLocally(file, fileName)
+		if err != nil {
+			resultChan <- "Failed to save file locally"
+			return
+		}
+		resultChan <- publicURL
+	}()
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	publicURL := <-resultChan
+
+	if publicURL == "Failed to save file locally" {
+		http.Error(w, publicURL, http.StatusInternalServerError)
 		return
 	}
 
@@ -50,7 +71,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		FileName:   fileName,
 		UploadDate: time.Now(),
 		Size:       fileHeader.Size,
-		LocalPath:  localPath,
+		LocalPath:  publicURL,
 	}
 
 	query := `INSERT INTO files (user_id, file_name, upload_date, size, local_path) VALUES ($1, $2, $3, $4, $5) RETURNING id`
@@ -61,7 +82,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"file_path": fileMetadata.LocalPath})
+	json.NewEncoder(w).Encode(map[string]string{"file_url": publicURL})
 }
 
 func saveFileLocally(file multipart.File, fileName string) (string, error) {
@@ -81,5 +102,7 @@ func saveFileLocally(file multipart.File, fileName string) (string, error) {
 		return "", err
 	}
 
-	return localFilePath, nil
+	publicURL := "http://localhost:8080/" + uploadDir + "/" + fileName
+
+	return publicURL, nil
 }
