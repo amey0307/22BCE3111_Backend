@@ -19,6 +19,7 @@
 
 # Log files
 *.log
+tmp
 
 # Test coverage files
 *.cov
@@ -27,6 +28,4 @@
 .DS_Store
 Thumbs.db
 
-# files
-database.go
-models.go
+# files 
