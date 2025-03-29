@@ -12,6 +12,8 @@ import (
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 
+	"go_backend_legalForce/fileupload"
+
 	"database/sql"
 
 	_ "github.com/lib/pq"
@@ -22,15 +24,6 @@ type User struct {
 	Email     string    `json:"email"`
 	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-type File struct {
-	ID         int       `json:"id"`
-	UserID     int       `json:"user_id"`
-	FileName   string    `json:"file_name"`
-	UploadDate time.Time `json:"upload_date"`
-	Size       int64     `json:"size"`
-	S3URL      string    `json:"s3_url"`
 }
 
 var db *sql.DB
@@ -67,6 +60,11 @@ func main() {
 	router.HandleFunc("/", test).Methods("GET")
 	router.HandleFunc("/register", RegisterUser).Methods("POST")
 	router.HandleFunc("/login", LoginUser).Methods("POST")
+
+	// File upload endpoint
+	router.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+		fileupload.UploadFile(w, r, db)
+	}).Methods("POST")
 
 	// Protected endpoint
 	router.Handle("/protected", AuthMiddleware(http.HandlerFunc(ProtectedEndpoint))).Methods("GET")
