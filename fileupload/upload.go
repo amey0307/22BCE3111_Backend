@@ -85,7 +85,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient 
 		fileMetadata.IsShared, fileMetadata.Expiration).Scan(&fileMetadata.ID)
 
 	if err != nil {
-		log.Printf("Failed to save file metadata: %v", err, fileMetadata) // Log the actual error
+		log.Printf("Failed to save file metadata: %v", err) // Log the actual error
 		http.Error(w, "Failed to save file metadata", http.StatusInternalServerError)
 		return
 	}

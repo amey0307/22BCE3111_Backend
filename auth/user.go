@@ -20,6 +20,11 @@ var db *sql.DB
 var redisClient *redis.Client
 var wg sync.WaitGroup
 
+func SetDB(database *sql.DB, redis *redis.Client) {
+	db = database
+	redisClient = redis
+}
+
 func LoginUser(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)

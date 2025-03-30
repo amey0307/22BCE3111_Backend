@@ -7,32 +7,35 @@ import (
 	"os"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/joho/godotenv"
 )
 
-var db *sql.DB
-var redisClient *redis.Client
+var DB *sql.DB
+var RedisClient *redis.Client
 
 func InitDB() {
 	var err error
-	connStr := os.Getenv("DB_CONNECTION_STRING")
-	if connStr == "" {
-		log.Fatal("DB_CONNECTION_STRING is not set in the environment")
+	err = godotenv.Load()
+	if err != nil {
+		log.Println("Warning: Error loading .env file:", err)
 	}
 
-	db, err = sql.Open("postgres", connStr)
+	connStr := os.Getenv("DB_CONNECTION_STRING")
+
+	DB, err = sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatalf("Failed to open database connection: %v", err)
 	}
 
-	err = db.Ping()
+	err = DB.Ping()
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
 
-	redisClient = redisconnection.NewRedisClient()
-	if redisClient == nil {
+	RedisClient = redisconnection.NewRedisClient()
+	if RedisClient == nil {
 		log.Fatal("Failed to initialize Redis client")
 	}
 
-	log.Println("Connected to the Neon database and Redis")
+	log.Println("Connected to the postgres database and Redis")
 }

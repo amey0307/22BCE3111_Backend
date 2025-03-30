@@ -31,6 +31,14 @@ func main() {
 	log.Println("Database initialized")
 	log.Println("Starting server...")
 
+	auth.SetDB(database.DB, redisClient)
+
+	// Update the global variables in main
+	db = database.DB
+
+	log.Println("Database initialized")
+	log.Println("Starting server...")
+
 	router := mux.NewRouter()
 
 	// Public endpoints
