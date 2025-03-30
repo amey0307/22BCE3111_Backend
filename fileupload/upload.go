@@ -48,7 +48,9 @@ func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient 
 
 	// Prepare file metadata
 	// Retrieve the user ID from the context or session
-	userID := 14 // Replace with actual user ID from context
+
+	//get user id from context
+	userID := 3
 
 	// Check if the user exists in the users table
 	var exists bool
@@ -93,9 +95,10 @@ func UploadFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient 
 	//clear cache
 	// redisClient.Del(ctx, "user_files:14")
 
-	// Cache the file metadata in Redis
-	cachedData, _ := json.Marshal(fileMetadata)
-	redisClient.Set(ctx, "file_metadata:"+strconv.Itoa(fileMetadata.ID), cachedData, 0) // Cache with no expiration
+	if redisClient != nil {
+		cachedData, _ := json.Marshal(fileMetadata)
+		redisClient.Set(ctx, "file_metadata:"+strconv.Itoa(fileMetadata.ID), cachedData, 0) // Cache with no expiration
+	}
 
 	// Respond with the public URL
 	w.WriteHeader(http.StatusOK)
