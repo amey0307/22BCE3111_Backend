@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "cmd/main.go",
+      "use": "@vercel/go",
+      "config": {
+        "packagePath": "."
+      }
+    },
+    {
+      "src": "uploads/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/uploads/(.*)",
+      "dest": "/uploads/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "cmd/main.go"
+    }
+  ],
+  "env": {
+    "DB_CONNECTION_STRING": "@db_connection_string",
+    "JWT_SECRET_KEY": "@jwt_secret_key",
+    "REDIS_URL": "@redis_url",
+    "REDIS_PASSWORD": "@redis_password"
+  }
+}
