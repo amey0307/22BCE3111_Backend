@@ -17,6 +17,7 @@ func RetrieveFiles(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClie
 
 	// Check Redis cache first
 	if redisClient != nil {
+
 		cachedFiles, err := redisClient.Get(ctx, cacheKey).Result()
 		if err == nil && redisClient != nil {
 			// log.Print("Cache hit", cachedFiles)
@@ -81,10 +82,7 @@ func ShareFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient *
 	// Construct the public URL -> this is the demo
 	publicURL := "http://localhost:8080/" + file.LocalPath
 
-	// Add a nil check before using redisClient
-	if redisClient != nil {
-		redisClient.Set(ctx, cacheKey, publicURL, 3600) // Cache for 1 hour
-	}
+	redisClient.Set(ctx, cacheKey, publicURL, 3600) // Cache for 1 hour
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(publicURL))
