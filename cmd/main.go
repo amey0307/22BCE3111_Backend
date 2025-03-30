@@ -13,6 +13,7 @@ import (
 	"go_backend_legalForce/auth"
 	"go_backend_legalForce/database"
 	"go_backend_legalForce/fileupload"
+	"go_backend_legalForce/job"
 	"go_backend_legalForce/middleware"
 
 	_ "github.com/lib/pq"
@@ -38,6 +39,9 @@ func main() {
 
 	log.Println("Database initialized")
 	log.Println("Starting server...")
+
+	// Start the file cleanup service in a goroutine
+	go job.StartFileCleanup(db)
 
 	router := mux.NewRouter()
 
