@@ -1,12 +1,22 @@
 # .air.toml
+
+# Root directory of your project
 root = "."
+
+# Temporary directory for compiled binaries
 tmp_dir = "tmp"
+
+# Include file extensions to watch
 include_ext = ["go", "tpl", "tmpl", "html"]
+
+# Exclude directories from watching
 exclude_dir = ["assets", "vendor"]
-build = {
-    bin = "tmp/main" # Path to the binary
-    cmd = "go build -o tmp/main" # Command to build the binary
-}
-watch = {
-    delay = 2000 # Delay in milliseconds
-}
+
+[build]
+# Command to build your application
+bin = "tmp/main"  # Path to the binary output
+cmd = "go build -o tmp/main ./cmd"  # Build command to run
+
+[watch]
+# Delay in milliseconds before rebuilding after a change
+delay = 1000

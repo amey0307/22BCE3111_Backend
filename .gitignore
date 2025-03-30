@@ -30,5 +30,4 @@ Thumbs.db
 
 # files 
 api_test.go
-file_cleanup.go
-search.go
+.tmp
