@@ -81,7 +81,9 @@ func ShareFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient *
 	// Construct the public URL -> this is the demo
 	publicURL := "http://localhost:8080/" + file.LocalPath
 
-	redisClient.Set(ctx, cacheKey, publicURL, 3600) // Cache for 1 hour
+	if redisClient != nil {
+		redisClient.Set(ctx, cacheKey, publicURL, 3600)
+	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(publicURL))
