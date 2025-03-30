@@ -13,7 +13,7 @@ import (
 
 // SearchFiles handles the search functionality for files based on metadata
 func SearchFiles(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient *redis.Client) {
-	userID := 14 // Replace with actual user ID from context this is for ameytrips0307@gmail.com
+	userID := 3 // Replace with actual user ID from context this is for ameytrips0307@gmail.com
 
 	name := r.URL.Query().Get("name")
 	uploadDate := r.URL.Query().Get("upload_date")

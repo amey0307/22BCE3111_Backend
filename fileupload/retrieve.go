@@ -12,16 +12,18 @@ import (
 )
 
 func RetrieveFiles(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient *redis.Client) {
-	userID := 14 // for my own account -> ameytrips0307@gmail It will be dynamic
+	userID := 3                                      // for my own account -> ameytrips0307@gmail It will be dynamic
+	cacheKey := "user_files:" + strconv.Itoa(userID) // Define it here, outside the if block
 
 	// Check Redis cache first
-	cacheKey := "user_files:" + strconv.Itoa(userID)
-	cachedFiles, err := redisClient.Get(ctx, cacheKey).Result()
-	if err == nil && redisClient != nil {
-		// log.Print("Cache hit", cachedFiles)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(cachedFiles))
-		return
+	if redisClient != nil {
+		cachedFiles, err := redisClient.Get(ctx, cacheKey).Result()
+		if err == nil && redisClient != nil {
+			// log.Print("Cache hit", cachedFiles)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(cachedFiles))
+			return
+		}
 	}
 
 	// If cache miss, retrieve from database
@@ -43,7 +45,6 @@ func RetrieveFiles(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClie
 			return
 		}
 		files = append(files, file)
-		log.Printf("Number of files retrieved: %d", len(files))
 	}
 
 	// Cache the result in Redis if redisClient is not nil
@@ -57,12 +58,17 @@ func RetrieveFiles(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClie
 }
 
 func ShareFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient *redis.Client, fileID int) {
+	var err error
+
 	cacheKey := "shared_file:" + strconv.Itoa(fileID)
-	cachedURL, err := redisClient.Get(ctx, cacheKey).Result()
-	if err == nil {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(cachedURL))
-		return
+
+	if redisClient != nil {
+		cachedURL, err := redisClient.Get(ctx, cacheKey).Result()
+		if err == nil {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(cachedURL))
+			return
+		}
 	}
 
 	var file models.File
@@ -75,7 +81,10 @@ func ShareFile(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClient *
 	// Construct the public URL -> this is the demo
 	publicURL := "http://localhost:8080/" + file.LocalPath
 
-	redisClient.Set(ctx, cacheKey, publicURL, 3600) // Cache for 1 hour
+	// Add a nil check before using redisClient
+	if redisClient != nil {
+		redisClient.Set(ctx, cacheKey, publicURL, 3600) // Cache for 1 hour
+	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(publicURL))

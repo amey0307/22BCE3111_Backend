@@ -94,7 +94,6 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
-	print("GetUsers")
 	rows, err := db.Query("SELECT id, email FROM users")
 	if err != nil {
 		http.Error(w, "Failed to retrieve users: "+err.Error(), http.StatusInternalServerError)
