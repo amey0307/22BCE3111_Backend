@@ -20,7 +20,6 @@ func RetrieveFiles(w http.ResponseWriter, r *http.Request, db *sql.DB, redisClie
 
 		cachedFiles, err := redisClient.Get(ctx, cacheKey).Result()
 		if err == nil && redisClient != nil {
-			// log.Print("Cache hit", cachedFiles)
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(cachedFiles))
 			return

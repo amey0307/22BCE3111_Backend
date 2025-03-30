@@ -1,148 +1,227 @@
+# File Management API Documentation
+
 # File Management API
 
-This is a backend API for managing file uploads, retrieval, and sharing functionalities. The API is built using Go and utilizes PostgreSQL for data storage and Redis for caching.
+A RESTful API for managing file uploads, retrieval, and sharing functionalities. Built with Go, PostgreSQL, and Redis.
 
 ## Table of Contents
 
-- [Base URL](#base-url)
-- [Authentication](#authentication)
-- [Endpoints](#endpoints)
-  - [Upload File](#upload-file)
-  - [Retrieve Files](#retrieve-files)
-  - [Search Files](#search-files)
-  - [Share File](#share-file)
-- [Error Handling](#error-handling)
-- [Technologies Used](#technologies-used)
-- [Installation](#installation)
-- [Usage](#usage)
+- [Base URL](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+- [Authentication](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+- [Endpoints](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+    - [User Management](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+        - [Register User](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+        - [Login User](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+        - [Get Users](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+    - [File Management](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+        - [Upload File](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+        - [Retrieve Files](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+        - [Share File](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+        - [Search Files](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+- [Error Handling](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+- [Environment Variables](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
+- [Development Setup](https://www.notion.so/File-Management-API-Documentation-1b867f328534801c8e84d5dc59994d51?pvs=21)
 
-## Base URL
-http://localhost:8080
-
+## Base URL http://localhost:8080
 
 ## Authentication
 
-- The API does not currently implement authentication. User IDs are hardcoded for demonstration purposes. In a production environment, consider implementing JWT or OAuth for secure access.
+The API uses JWT (JSON Web Token) for authentication.
+
+- To access protected endpoints, include the token in the `Authorization` header of your requests.
+- Example: `Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ...`
 
 ## Endpoints
 
-### 1. Upload File
+### User Management
 
-- **Endpoint**: `/upload`
+### Register User
+
+Creates a new user account.
+
+- **URL**: `/register`
 - **Method**: `POST`
-- **Description**: Uploads a file and saves its metadata in the database.
-- **Request**:
-  - **Form Data**:
-    - `file`: The file to be uploaded.
-- **Response**:
-  - **Status**: `200 OK`
-  - **Body**: 
+- **Authentication**: None
+- **Request Body**:
+    
     ```json
     {
-      "file_url": "http://localhost:8080/uploads/test-file.txt"
+      "email": "user@example.com",
+      "password": "secure_password"
     }
     ```
+    
 
-### 2. Retrieve Files
+**Response**
 
-- **Endpoint**: `/files`
-- **Method**: `GET`
-- **Description**: Retrieves a list of files uploaded by a specific user.
-- **Request**: 
-  - **Query Parameters**:
-    - `user_id`: The ID of the user whose files are to be retrieved (currently hardcoded).
+:
+
+- **Status**: `200 OK`
+- **Body**:
+    
+    ```jsx
+    {
+    
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ..."
+    
+    }
+    ```
+    
+
+### Get Users
+
+Retrieves a list of all registered users.
+
+- **URL**: `/getusers`
+- **Method**: `GET`
+- **Authentication**: None
 - **Response**:
-  - **Status**: `200 OK`
-  - **Body**: 
-    ```json
+    - **Status**: `200 OK`
+    - **Body:**
+    
+    ```jsx
     [
       {
         "id": 1,
-        "user_id": 1,
-        "file_name": "test-file.txt",
-        "upload_date": "2023-01-01T00:00:00Z",
-        "size": 1024,
-        "local_path": "http://localhost:8080/uploads/test-file.txt",
-        "file_type": "txt",
-        "s3_url": "",
-        "description": "",
-        "is_shared": false,
-        "expiration_date": null
-      }
-    ]
-    ```
-
-### 3. Search Files
-
-- **Endpoint**: `/search`
-- **Method**: `GET`
-- **Description**: Searches for files based on metadata.
-- **Request**: 
-  - **Query Parameters**:
-    - `name`: (optional) The name of the file to search for.
-    - `upload_date`: (optional) The date the file was uploaded (format: `YYYY-MM-DD`).
-    - `file_type`: (optional) The type of the file (e.g., `txt`, `pdf`).
-- **Response**:
-  - **Status**: `200 OK`
-  - **Body**: 
-    ```json
-    [
+        "email": "user1@example.com"
+      },
       {
-        "id": 1,
-        "user_id": 1,
-        "file_name": "test-file.txt",
-        "upload_date": "2023-01-01T00:00:00Z",
-        "size": 1024,
-        "local_path": "http://localhost:8080/uploads/test-file.txt",
-        "file_type": "txt",
-        "s3_url": "",
-        "description": "",
-        "is_shared": false,
-        "expiration_date": null
+        "id": 2,
+        "email": "user2@example.com"
       }
     ]
     ```
+    
 
-### 4. Share File
+### **File Management**
 
-- **Endpoint**: `/share/{file_id}`
-- **Method**: `GET`
-- **Description**: Shares a file via a public link.
-- **Request**: 
-  - **Path Parameter**:
-    - `file_id`: The ID of the file to be shared.
+### Upload File
+
+Uploads a file and saves its metadata in the database.
+
+- **URL**: `/upload`
+- **Method**: `POST`
+- **Authentication**: Required
+- **Request**:
+    - **Content-Type**: multipart/form-data
+    - **Form Fields**:
+        - file: The file to be uploaded (required)
 - **Response**:
-  - **Status**: `200 OK`
-  - **Body**: 
-    ```json
-    "http://localhost:8080/uploads/test-file.txt"
-    ```
+    - **Status**: `200 OK`
+    - **Body**:
 
-## Error Handling
+```jsx
+{
+  "file_url": "http://localhost:8080/uploads/b78c0293-c4a3-4587-b9e1-b83df4e6d496.txt"
+}
+```
 
-- The API returns appropriate HTTP status codes for different error scenarios:
-  - `400 Bad Request`: Invalid request parameters.
-  - `404 Not Found`: Resource not found.
-  - `500 Internal Server Error`: An error occurred on the server.
+### Retrieve Files
 
-## Technologies Used
+Gets a list of all files uploaded by the authenticated user.
 
-- Go
-- PostgreSQL
-- Redis
-- Gorilla Mux (for routing)
-- Go-Redis (for Redis client)
+- **URL**: `/files`
+- **Method**: `GET`
+- **Authentication**: Required
+- **Response**:
+    - **Status**: `200 OK`
+    - **Body**:
 
-## Installation
+```jsx
+[
+  {
+    "id": 1,
+    "user_id": 3,
+    "file_name": "b78c0293-c4a3-4587-b9e1-b83df4e6d496.txt",
+    "upload_date": "2025-03-30T15:10:25Z",
+    "size": 36,
+    "local_path": "http://localhost:8080/uploads/b78c0293-c4a3-4587-b9e1-b83df4e6d496.txt",
+    "file_type": ".txt",
+    "s3_url": "",
+    "description": "",
+    "is_shared": false,
+    "expiration_date": "0001-01-01T00:00:00Z"
+  }
+]
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/your-repo.git
-   cd your-repo
+### Share File
 
+Creates a shareable link for a specific file.
 
-### Customization
+- **URL**: `/share/{file_id}`
+- **Method**: `GET`
+- **Authentication**: Required
+- **URL Parameters**:
+    - `file_id`: ID of the file to share
+- **Response**:
+    - **Status**: `200 OK`
+    - **Body**
 
-- **Base URL**: Update the base URL if your application is hosted elsewhere.
-- **Authentication**: If you implement authentication, update the documentation accordingly.
-- **
+```jsx
+http://localhost:8080/uploads/b78c0293-c4a3-4587-b9e1-b83df4e6d496.txt
+```
+
+### Search Files
+
+Searches for files based on metadata filters.
+
+- **URL**: `/search`
+- **Method**: `GET`
+- **Authentication**: None
+- **Query Parameters**:
+    - name: (Optional) Filter by file name
+    - `upload_date`: (Optional) Filter by upload date (format: `YYYY-MM-DD`)
+    - `file_type`: (Optional) Filter by file extension (e.g. `txt`, `pdf`)
+- **Response**:
+    - **Status**: `200 OK`
+    - **Body**
+
+```jsx
+[
+  {
+    "id": 1,
+    "file_name": "b78c0293-c4a3-4587-b9e1-b83df4e6d496.txt",
+    "upload_date": "2025-03-30T15:10:25Z",
+    "size": 36,
+    "local_path": "http://localhost:8080/uploads/b78c0293-c4a3-4587-b9e1-b83df4e6d496.txt"
+  }
+]
+```
+
+## **Error Handling**
+
+The API returns appropriate HTTP status codes along with error messages:
+
+- `400 Bad Request`: Invalid input or request format
+- `401 Unauthorized`: Authentication required or invalid credentials
+- `404 Not Found`: Resource not found
+- `500 Internal Server Error`: Server-side error
+
+## **Environment Variables**
+
+The application requires the following environment variables:
+
+- `DB_CONNECTION_STRING`: PostgreSQL connection string
+- `JWT_SECRET_KEY`: Secret key for JWT token generation
+- `REDIS_URL`: Redis server URL
+- `REDIS_PASSWORD`: Redis server password
+
+## **Development Setup**
+
+1. Clone the repository
+2. Create a .env file with the required environment variables
+3. Run the application:
+    
+    go run cmd/main.go
+    
+
+```jsx
+go run cmd/main.go
+```
+
+1. go run cmd/main.go
+
+```jsx
+go run cmd/main.go
+```
